@@ -1,0 +1,162 @@
+resources:
+- name: runtime-og-ci
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry-incubator/app-autoscaler-ci.git
+    branch: master
+
+- name: app-autoscaler
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry-incubator/app-autoscaler.git
+    branch: develop
+
+- name: app-autoscaler-release
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry-incubator/app-autoscaler-release.git
+    branch: master
+
+- name: cf-deployment
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/cf-deployment.git
+    branch: master
+
+
+jobs:
+- name: unit-tests
+  max_in_flight: 1
+  plan:
+  - aggregate:
+    - get: app-autoscaler
+      trigger: true
+    - get: runtime-og-ci
+  - task: unit
+    file: runtime-og-ci/autoscaler/tasks/autoscaler-unit-tests.yml
+  # - put: tracker
+  #   params:
+  #     repos:
+  #       - app-autoscaler
+
+- name: integration-tests
+  max_in_flight: 1
+  plan:
+  - aggregate:
+    - get: app-autoscaler
+      passed: [unit-tests]
+      trigger: true
+    - get: runtime-og-ci
+  - task: integration
+    file: runtime-og-ci/autoscaler/tasks/integration-tests.yml
+
+- name: deploy-cf
+  serial_groups:
+  - bosh-app-autoscaler
+  plan:
+  - aggregate:
+    - get: cf-deployment
+      trigger: true
+  - task: deploy
+    params:
+      BOSH_TARGET: {{bosh-lite-ip}}
+      BOSH_CA: {{bosh-ca}}
+      BOSH_USERNAME: {{bosh-username}}
+      BOSH_PASSWORD: {{bosh-password}}
+      CF_ADMIN_PASSWORD: {{cf-password}}
+      CF_ADMIN_CLIENT_SECRET: {{cf-secrect}}
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: qibobo/autoscaler-ci, tag: latest}
+      inputs:
+      - name: cf-deployment
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          #!/bin/bash
+          set -e
+
+          echo "$BOSH_CA" > "./bosh_ca"
+          bosh -e $BOSH_TARGET --ca-cert ./bosh_ca alias-env vbox 
+          export BOSH_CLIENT=$BOSH_USERNAME 
+          export BOSH_CLIENT_SECRET=$BOSH_PASSWORD
+
+          cd cf-deployment
+          bosh -n -e vbox upload-stemcell https://bosh.io/d/stemcells/bosh-warden-boshlite-ubuntu-trusty-go_agent
+          bosh -n -e vbox update-cloud-config bosh-lite/cloud-config.yml
+          bosh -e vbox -d cf deploy -n cf-deployment.yml \
+            -o operations/bosh-lite.yml \
+            --vars-store deployment-vars.yml \
+            -v system_domain=bosh-lite.com \
+            -v cf_admin_password=$CF_ADMIN_PASSWORD \
+            -v uaa_admin_client_secret=$CF_ADMIN_CLIENT_SECRET
+
+- name: deploy-autoscaler
+  serial_groups:
+  - bosh-app-autoscaler
+  plan:
+  - aggregate:
+    - get: app-autoscaler-release
+      trigger: true
+  - task: deploy
+    params:
+      BOSH_TARGET: {{bosh-lite-ip}}
+      BOSH_USERNAME: {{bosh-username}}
+      BOSH_PASSWORD: {{bosh-password}}
+      BOSH_CA: {{bosh-ca}}
+      CF_ADMIN_PASSWORD: {{cf-password}}
+      CF_ADMIN_CLIENT_SECRET: {{cf-secrect}}
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source: {repository: qibobo/autoscaler-ci, tag: latest}
+      inputs:
+      - name: app-autoscaler-release
+      run:
+        path: bash
+        args:
+        - -c
+        - |
+          #!/bin/bash
+          set -e
+
+          echo "$BOSH_CA" > "./bosh_ca"
+          bosh -e $BOSH_TARGET --ca-cert ./bosh_ca alias-env vbox 
+          export BOSH_CLIENT=$BOSH_USERNAME 
+          export BOSH_CLIENT_SECRET=$BOSH_PASSWORD
+
+          cd app-autoscaler-release
+          # ./scripts/update
+          sed -i -e 's/vm_type: default/vm_type: minimal/g' ./templates/app-autoscaler-deployment.yml
+          bosh create-release --force
+          bosh -n -e vbox upload-release --rebase
+
+          bosh -e vbox -d app-autoscaler \
+               deploy -n templates/app-autoscaler-deployment.yml \
+               --vars-store=bosh-lite/deployments/vars/autoscaler-deployment-vars.yml \
+               -v system_domain=bosh-lite.com \
+               -v cf_admin_password=$CF_ADMIN_PASSWORD \
+               -v cf_admin_client_secret=$CF_ADMIN_CLIENT_SECRET
+
+- name: acceptance
+  serial_groups:
+  - bosh-app-autoscaler
+  plan:
+  - aggregate:
+    - get: app-autoscaler-release
+      trigger: true
+      passed: [deploy-autoscaler]
+      params:
+        paths: [src/acceptance]
+    - get: runtime-og-ci
+  - task: run-acceptance
+    file: runtime-og-ci/autoscaler/tasks/autoscaler-acceptance.yml
+    privileged: true
+    params:
+      BOSH_TARGET: {{bosh-lite-ip}}
+      CF_ADMIN_PASSWORD: {{cf-password}}
