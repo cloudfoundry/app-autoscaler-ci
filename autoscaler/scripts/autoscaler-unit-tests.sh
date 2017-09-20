@@ -7,7 +7,7 @@ service postgresql start
 rm -rf /usr/local/var/postgres
 mkdir -p /usr/local/var/postgres
 chown postgres /usr/local/var/postgres
-nohup su - postgres -c '/usr/lib/postgresql/9.4/bin/pg_ctl init -D /usr/local/var/postgres && /usr/lib/postgresql/9.4/bin/postgres -D /usr/local/var/postgres' > pg.log 2>&1 &
+nohup su - postgres -c "/usr/lib/postgresql/$PG_MAJOR/bin/pg_ctl init -D /usr/local/var/postgres && /usr/lib/postgresql/$PG_MAJOR/bin/postgres -D /usr/local/var/postgres" > pg.log 2>&1 &
 echo "=============>sleep 30 seconds waiting for postgres is ready"
 sleep 30
 
