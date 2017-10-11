@@ -1,0 +1,19 @@
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: runtimeog/ci_image, tag: latest}
+
+inputs:
+- name: hm9000
+- name: dea-hm-workspace
+- name: runtime-og-ci
+
+outputs:
+- name: bumped
+
+run:
+  path: runtime-og-ci/runtime-og/scripts/bump-dea-hm-workspace.sh
+  args:
+  - hm9000
+  - github.com/cloudfoundry/hm9000

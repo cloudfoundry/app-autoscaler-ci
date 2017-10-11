@@ -1,0 +1,17 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: runtimeog/ci_image, tag: latest}
+
+inputs:
+- name: runtime-og-ci
+- name: cf-release
+- name: dea-hm-workspace
+
+outputs:
+- name: assets
+
+run:
+  path: runtime-og-ci/runtime-og/scripts/create-cf-release.sh

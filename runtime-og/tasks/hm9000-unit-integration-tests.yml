@@ -1,0 +1,14 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: runtimeog/ci_image, tag: latest}
+
+inputs:
+- name: hm9000
+- name: dea-hm-workspace
+- name: runtime-og-ci
+
+run:
+  path: runtime-og-ci/runtime-og/scripts/hm9000-unit-integration-tests.sh

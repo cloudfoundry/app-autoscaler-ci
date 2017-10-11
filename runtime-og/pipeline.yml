@@ -1,0 +1,193 @@
+resources:
+- name: stemcell
+  type: bosh-io-stemcell
+  source:
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
+
+- name: deploy-to-bosh-lite
+  type: bosh-deployment
+  source:
+    target: {{bosh-lite-target}}
+    username: {{bosh-username}}
+    password: {{bosh-password}}
+    deployment: cf-warden
+
+- name: runtime-og-ci
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/runtime-og-ci
+    branch: master
+
+- name: warden
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/warden
+    branch: master
+
+- name: dea_next
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/dea_ng
+    branch: master
+
+- name: dea-hm-workspace
+  type: git
+  source:
+    uri: git@github.com:/cloudfoundry/dea-hm-workspace.git
+    branch: master
+    private_key: {{workspace_key}}
+
+- name: hm9000
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/hm9000
+    branch: master
+
+- name: cf-release
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/cf-release
+    branch: develop
+
+- name: rootfs
+  type: github-release
+  source:
+    user: cloudfoundry
+    repository: stacks
+    access_token: {{gh_release_token}} # github will limit your requests without this
+
+- name: tracker
+  type: tracker
+  source:
+    tracker_url: https://www.pivotaltracker.com
+    project_id: "900612"
+    token: {{tracker_api_token}}
+
+jobs:
+- name: warden-unit-tests
+  plan:
+  - aggregate:
+    - get: warden
+      trigger: true
+    - get: rootfs
+      trigger: true
+    - get: dea-hm-workspace
+      params:
+        submodules: [src/warden]
+    - get: runtime-og-ci
+  - task: unit
+    privileged: true
+    file: runtime-og-ci/runtime-og/tasks/warden-unit-tests.yml
+  - task: bump-dea-hm-workspace
+    file: runtime-og-ci/runtime-og/tasks/bump-warden.yml
+  - put: dea-hm-workspace
+    params:
+      repository: bumped/dea-hm-workspace
+      rebase: true
+  - put: tracker
+    params:
+      repos:
+        - warden
+
+
+- name: dea_next-tests
+  plan:
+  - aggregate:
+    - get: dea_next
+      trigger: true
+    - get: dea-hm-workspace
+      params:
+        paths: [src/warden]
+        submodules: [src/warden, src/dea_next]
+      trigger: true
+    - get: rootfs
+      trigger: true
+      passed: [warden-unit-tests]
+    - get: runtime-og-ci
+  - aggregate:
+    - task: dir_server
+      file: runtime-og-ci/runtime-og/tasks/dir_server-tests.yml
+    - task: unit
+      file: runtime-og-ci/runtime-og/tasks/dea_next-unit-tests.yml
+    - task: integration
+      privileged: true
+      file: runtime-og-ci/runtime-og/tasks/dea_next-integration-tests.yml
+  - task: bump-dea-hm-workspace
+    file: runtime-og-ci/runtime-og/tasks/bump-dea_next.yml
+  - put: dea-hm-workspace
+    params:
+      repository: bumped/dea-hm-workspace
+      rebase: true
+  - put: tracker
+    params:
+      repos:
+        - dea_next
+
+- name: hm9000-unit-integration-tests
+  plan:
+  - aggregate:
+    - get: dea-hm-workspace
+      params:
+        paths: [src]
+        ignore_paths: [src/warden, src/dea_next, src/github.com/cloudfoundry/hm9000]
+      trigger: true
+    - get: hm9000
+      trigger: true
+    - get: runtime-og-ci
+  - task: unit
+    file: runtime-og-ci/runtime-og/tasks/hm9000-unit-integration-tests.yml
+  - task: bump-dea-hm-workspace
+    file: runtime-og-ci/runtime-og/tasks/bump-hm9000.yml
+  - put: dea-hm-workspace
+    params:
+      repository: bumped/dea-hm-workspace
+      rebase: true
+  - put: tracker
+    params:
+      repos:
+        - hm9000
+
+
+- name: create-and-deploy-cf-release
+  serial_groups: [bosh-lite]
+  plan:
+  - aggregate:
+    - get: dea-hm-workspace
+      trigger: true
+    - get: runtime-og-ci
+    - get: cf-release
+    - get: stemcell
+  - task: create-release
+    file: runtime-og-ci/runtime-og/tasks/create-cf-release.yml # has some softlayer hacks
+    params:
+      BOSH_TARGET: {{bosh-target}}
+      BOSH_USERNAME: {{bosh-username}}
+      BOSH_PASSWORD: {{bosh-password}}
+  - put: deploy-to-bosh-lite
+    params:
+      manifest: assets/cf.yml
+      stemcells:
+      - stemcell/stemcell.tgz
+      releases:
+      - assets/release.tgz
+
+- name: CATs
+  serial_groups: [bosh-lite]
+  plan:
+  - aggregate:
+    - get: dea-hm-workspace
+      passed: [create-and-deploy-cf-release]
+      trigger: true
+      submodules: none
+    - get: runtime-og-ci
+  - task: run-cats
+    file: runtime-og-ci/runtime-og/tasks/cats.yml
+    params:
+      BOSH_TARGET: {{bosh-target}}
+      BOSH_USERNAME: {{bosh-username}}
+      BOSH_PASSWORD: {{bosh-password}}
+      ERRAND_NAME: acceptance_tests
+  - put: tracker
+    params:
+      repos:
+        - dea-hm-workspace

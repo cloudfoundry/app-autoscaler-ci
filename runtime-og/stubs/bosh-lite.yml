@@ -1,0 +1,6 @@
+properties:
+  acceptance_tests:
+    nodes: 3
+jobs:
+- instances: 2
+  name: hm9000_z1

@@ -1,0 +1,14 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: runtimeog/ci_image, tag: latest}
+
+inputs:
+- name: warden
+- name: runtime-og-ci
+- name: rootfs
+
+run:
+  path: runtime-og-ci/runtime-og/scripts/warden-unit-tests.sh

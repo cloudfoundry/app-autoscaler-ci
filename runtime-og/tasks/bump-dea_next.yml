@@ -1,0 +1,19 @@
+platform: linux
+
+image_resource:
+  type: docker-image
+  source: {repository: runtimeog/ci_image, tag: latest}
+
+inputs:
+- name: dea-hm-workspace
+- name: dea_next
+- name: runtime-og-ci
+
+outputs:
+- name: bumped
+
+run:
+  path: runtime-og-ci/runtime-og/scripts/bump-dea-hm-workspace.sh
+  args:
+  - dea_next
+  - dea_next

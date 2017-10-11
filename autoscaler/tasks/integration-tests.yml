@@ -1,0 +1,15 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: fraenkel/autoscaler-ci
+    tag: latest
+
+inputs:
+- name: app-autoscaler
+- name: runtime-og-ci
+
+run:
+  path: runtime-og-ci/autoscaler/scripts/integration-tests.sh
