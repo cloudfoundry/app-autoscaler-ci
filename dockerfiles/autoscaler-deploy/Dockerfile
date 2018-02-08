@@ -1,5 +1,5 @@
-FROM ubuntu:14.04
-MAINTAINER https://github.com/cloudfoundry/pipelines_og
+FROM ubuntu:16.04
+MAINTAINER qiye
 
 RUN \
       apt-get update && \
@@ -19,15 +19,16 @@ RUN \
       apt-get clean
 
 # Install go
-RUN wget https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz && \
-  tar -C /usr/local -xzf go1.7.1.linux-amd64.tar.gz && \
-  rm -rf go1.7.1.linux-amd64.tar.gz
+RUN wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz && \
+  tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz && \
+  rm -rf go1.9.2.linux-amd64.tar.gz
 
 # Create directory for GOPATH
 RUN mkdir -p /go/bin
 
 # set GOPATH
 ENV GOPATH /go
+
 
 # add go and GOPATH/bin to PATH
 ENV PATH $PATH:$GOPATH/bin:/usr/local/go/bin
