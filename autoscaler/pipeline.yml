@@ -2,8 +2,8 @@ resources:
 - name: app-autoscaler-ci
   type: git
   source:
-    uri: https://github.com/qibobo/app-autoscaler-ci.git
-    branch: dev_qy_pipeline
+    uri: https://github.com/cloudfoundry-incubator/app-autoscaler-ci.git
+    branch: master
 
 - name: app-autoscaler-release
   type: git
