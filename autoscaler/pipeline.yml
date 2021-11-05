@@ -155,6 +155,7 @@ resources:
     regexp: releases/app-autoscaler-v(.*).tgz
 
 jobs:
+  #==================================================
 - name: set-pipeline
   public: true
   plan:
@@ -163,6 +164,7 @@ jobs:
   - set_pipeline: self
     file: app-autoscaler-ci/autoscaler/pipeline.yml
 
+  #==================================================
 - name: unit-tests-main
   public: true
   build_logs_to_retain: 100
@@ -178,9 +180,7 @@ jobs:
     input_mapping:
       app-autoscaler-release: app-autoscaler-release-main
 
-
-
-
+  #==================================================
 - name: unit-tests-pr
   public: true
   build_logs_to_retain: 100
@@ -234,7 +234,7 @@ jobs:
     input_mapping:
       app-autoscaler-release: app-autoscaler-release-main
 
-
+  #==================================================
 - name: integration-tests-pr
   public: true
   build_logs_to_retain: 100
@@ -272,8 +272,7 @@ jobs:
       status: failure
       context: integration-tests
 
-
-
+  #==================================================
 - name: setup-infrastructure
   serial_groups: [infra]
   public: true
@@ -312,7 +311,7 @@ jobs:
       GCP_DNS_ZONE: ci-cloudfoundry-org
       GCP_DNS_NAME: autoscaler.ci.cloudfoundry.org
 
-
+  #==================================================
 - name: deploy-autoscaler
   serial_groups: [infra]
   public: true
@@ -344,6 +343,7 @@ jobs:
     params:
       SYSTEM_DOMAIN: autoscaler.ci.cloudfoundry.org
 
+  #==================================================
 - name: deploy-autoscaler-pr
   serial_groups: [infra]
   public: true
@@ -375,7 +375,7 @@ jobs:
       params:
         SYSTEM_DOMAIN: autoscaler.ci.cloudfoundry.org
 
-
+  #==================================================
 - name: delete-autoscaler
   serial_groups: [infra]
   public: true
@@ -408,8 +408,7 @@ jobs:
     input_mapping:
       bbl-state: bbl-state
 
-
-
+  #==================================================
 - name: destroy-infrastructure
   serial_groups: [infra]
   public: true
@@ -433,8 +432,7 @@ jobs:
         repository: updated-bbl-state
         rebase: true
 
-
-
+  #==================================================
 - name: deploy-cf
   serial_groups: [infra]
   public: true
@@ -481,7 +479,7 @@ jobs:
     params:
       ERRAND_NAME: smoke-tests
 
-
+  #==================================================
 - name: acceptance-main
   serial_groups: [infra]
   public: true
@@ -524,8 +522,7 @@ jobs:
     ensure:
       <<: *cleanupTaskMain
 
-
-
+  #==================================================
 - name: upgrade-test-main
   serial_groups: [infra]
   public: true
@@ -594,6 +591,7 @@ jobs:
       app-autoscaler-release: app-autoscaler-release-main
     <<: *cleanupMain
 
+  #==================================================
 - name: acceptance-pr
   serial_groups: [infra]
   public: true
@@ -628,6 +626,7 @@ jobs:
     file: app-autoscaler-ci/autoscaler/tasks/deploy-autoscaler.yml
     params:
       SYSTEM_DOMAIN: autoscaler.ci.cloudfoundry.org
+      <: *app-autoscaler-ops-files
     input_mapping:
       app-autoscaler-release: app-autoscaler-release-pr
     <<: *cleanupPr
@@ -658,9 +657,7 @@ jobs:
       status: failure
       context: acceptance-tests
 
-
-
-
+#==================================================
 - name: release
   public: true
   build_logs_to_retain: 100
@@ -700,9 +697,7 @@ jobs:
       body: generated-release/changelog.md
       globs: [generated-release/artifacts/*]
 
-
-
-
+  #==================================================
 - name: draft-pr
   public: true
   build_logs_to_retain: 100
@@ -722,9 +717,7 @@ jobs:
     input_mapping:
       app-autoscaler-release: app-autoscaler-release-pr
 
-
-
-
+  #==================================================
 - name: draft
   public: true
   build_logs_to_retain: 100
