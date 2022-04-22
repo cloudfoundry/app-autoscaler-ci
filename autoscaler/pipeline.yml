@@ -192,13 +192,13 @@ resources:
   type: bosh-io-release
   check_every: 5m
   source:
-    repository: https://github.com/bosh-packages/golang-release
+    repository: bosh-packages/golang-release
 
 - name: java-release
   type: bosh-io-release
   check_every: 5m
   source:
-    repository: https://github.com/bosh-packages/golang-release
+    repository: bosh-packages/java-release
 
 jobs:
 - name: set-pipeline
