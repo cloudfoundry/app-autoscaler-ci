@@ -1,5 +1,8 @@
-app-autoscaler-ci
+Archived repository - app-autoscaler-ci
 =============
+
+:warning: :warning:The contents of this repo have been moved over to https://github.com/cloudfoundry/app-autoscaler-release, please submit all issues/pull requests on that repository.:warning: :warning:
+
 
 This repository provides all public scripts and pipeline deployments used
 by the app autoscaler team.  The public pipeline is hosted at: https://bosh.ci.cloudfoundry.org/.
